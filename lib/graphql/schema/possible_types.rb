@@ -27,7 +27,7 @@ module GraphQL
         when GraphQL::UnionType
           type_defn.possible_types(ctx)
         when GraphQL::InterfaceType
-          @interface_implementers[type_defn]
+          type_defn.filter_possible_types(@interface_implementers[type_defn], ctx)
         when GraphQL::BaseType
           [type_defn]
         else

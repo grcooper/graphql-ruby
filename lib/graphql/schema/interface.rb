@@ -102,7 +102,7 @@ module GraphQL
 
         def kind
           GraphQL::TypeKinds::INTERFACE
-        end
+        end 
 
         protected
 

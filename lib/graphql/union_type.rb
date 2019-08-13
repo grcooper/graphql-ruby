@@ -27,7 +27,7 @@ module GraphQL
     accepts_definitions :possible_types, :resolve_type
     ensure_defined :possible_types, :resolve_type, :resolve_type_proc
 
-    attr_accessor :resolve_type_proc, :filter_possible_types_proc
+    attr_accessor :resolve_type_proc, :filtered_possible_types_proc
 
     def initialize
       super
