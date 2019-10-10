@@ -54,6 +54,15 @@ module Dummy
     def self_as_edible
       object
     end
+
+    def self.filtered_possible_types(ctx)
+      types = []
+      if ctx[:no_cheese]
+        types << Cheese
+      end
+
+      types
+    end
   end
 
   module EdibleAsMilk
@@ -61,6 +70,15 @@ module Dummy
     description "Milk :+1:"
     def self.resolve_type(obj, ctx)
       Milk
+    end
+
+    def self.filtered_possible_types(ctx)
+      types = super
+      if ctx[:no_milk]
+        types << Milk
+      end
+
+      types
     end
   end
 

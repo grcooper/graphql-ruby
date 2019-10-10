@@ -3,10 +3,19 @@ require "spec_helper"
 
 describe GraphQL::InterfaceType do
   let(:interface) { Dummy::Edible.graphql_definition }
+  let(:edible_as_milk_interface) { Dummy::EdibleAsMilk.graphql_definition }
   let(:dummy_query_context) { OpenStruct.new(schema: Dummy::Schema) }
 
   it "has possible types" do
     assert_equal([Dummy::Cheese.graphql_definition, Dummy::Honey.graphql_definition, Dummy::Milk.graphql_definition], Dummy::Schema.possible_types(interface))
+  end
+
+  it "filters possible types" do
+    assert_equal([Dummy::Honey.graphql_definition, Dummy::Milk.graphql_definition], Dummy::Schema.possible_types(interface, { no_cheese: true }))
+  end
+
+  it "filters possible types only based on current module definition" do
+    assert_equal([Dummy::Cheese.graphql_definition], Dummy::Schema.possible_types(edible_as_milk_interface, { no_cheese: true, no_milk: true }))
   end
 
   describe "query evaluation" do

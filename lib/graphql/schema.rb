@@ -451,6 +451,7 @@ module GraphQL
     # @param context [GraphQL::Query::Context] The context for the current query
     # @return [Array<GraphQL::ObjectType>] types which belong to `type_defn` in this schema
     def possible_types(type_defn, context = GraphQL::Query::NullContext)
+      context ||= GraphQL::Query::NullContext
       @possible_types ||= GraphQL::Schema::PossibleTypes.new(self)
       @possible_types.possible_types(type_defn, context)
     end
