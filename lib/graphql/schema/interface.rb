@@ -89,6 +89,7 @@ module GraphQL
           type_defn.name = graphql_name
           type_defn.description = description
           type_defn.orphan_types = orphan_types
+          type_defn.filtered_possible_types = method(:filtered_possible_types)
           fields.each do |field_name, field_inst|
             field_defn = field_inst.graphql_definition
             type_defn.fields[field_defn.name] = field_defn
@@ -102,6 +103,16 @@ module GraphQL
 
         def kind
           GraphQL::TypeKinds::INTERFACE
+        end
+
+        def filtered_possible_types(_ctx)
+          []
+        end
+
+        def filter_possible_types(types, ctx)
+          types_to_filter = filtered_possible_types(ctx).map { |type| GraphQL::BaseType.resolve_related_type(type) }
+
+          types.delete_if { |type| types_to_filter.include?(GraphQL::BaseType.resolve_related_type(type)) }
         end
 
         protected

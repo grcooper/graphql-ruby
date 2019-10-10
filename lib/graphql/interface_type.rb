@@ -25,8 +25,8 @@ module GraphQL
   class InterfaceType < GraphQL::BaseType
     accepts_definitions :fields, :orphan_types, :resolve_type, field: GraphQL::Define::AssignObjectField
 
-    attr_accessor :fields, :orphan_types, :resolve_type_proc
-    ensure_defined :fields, :orphan_types, :resolve_type_proc, :resolve_type
+    attr_accessor :fields, :orphan_types, :resolve_type_proc, :filtered_possible_types_proc
+    ensure_defined :fields, :orphan_types, :resolve_type_proc, :resolve_type, :filtered_possible_types_proc
 
     def initialize
       super
@@ -81,6 +81,27 @@ module GraphQL
     def possible_type?(type, ctx)
       type_name = type.is_a?(String) ? type : type.graphql_name
       !get_possible_type(type_name, ctx).nil?
+    end
+
+    def filtered_possible_types(ctx)
+      if @filtered_possible_types_proc
+        @filtered_possible_types_proc.call(ctx)
+      else
+        []
+      end
+    end
+
+    def filter_possible_types(types, ctx)
+      return types unless types.respond_to?(:map)
+
+      original_types = types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
+      types_to_filter = filtered_possible_types(ctx).map { |type| GraphQL::BaseType.resolve_related_type(type) }
+
+      original_types - types_to_filter
+    end
+
+    def filtered_possible_types=(new_filter_possible_types_proc)
+      @filtered_possible_types_proc = new_filter_possible_types_proc
     end
   end
 end
