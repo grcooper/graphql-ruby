@@ -24,22 +24,33 @@ module GraphQL
   #  }
   #
   class UnionType < GraphQL::BaseType
-    accepts_definitions :possible_types, :resolve_type
+    accepts_definitions :resolve_type
     ensure_defined :possible_types, :resolve_type, :resolve_type_proc
 
-    attr_accessor :resolve_type_proc
+    attr_accessor :resolve_type_proc, :type_visibilities
+
+    class << self
+      attr_reader :type_visibilities
+
+      def possible_types(*types, visibility: nil)
+        @type_visibilities ||= []
+        @type_visibilities << @type_visibility_class.new(types, visibility)
+      end
+
+      def type_visibility_class(visibility_class=nil)
+        if visibility_class
+          @type_visibility_class = visibility_class
+        else
+          @type_visibility_class || TypeMembership
+        end
+      end
+    end
 
     def initialize
       super
-      @dirty_possible_types = []
-      @clean_possible_types = nil
+      @type_visibilities = self.class.type_visibilities
+      @cached_possible_types = {}
       @resolve_type_proc = nil
-    end
-
-    def initialize_copy(other)
-      super
-      @clean_possible_types = nil
-      @dirty_possible_types = other.dirty_possible_types.dup
     end
 
     def kind
@@ -51,18 +62,12 @@ module GraphQL
       possible_types.include?(child_type_defn)
     end
 
-    def possible_types=(new_possible_types)
-      @clean_possible_types = nil
-      @dirty_possible_types = new_possible_types
-    end
-
     # @return [Array<GraphQL::ObjectType>] Types which may be found in this union
-    def possible_types
-      @clean_possible_types ||= begin
-        if @dirty_possible_types.respond_to?(:map)
-          @dirty_possible_types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
-        else
-          @dirty_possible_types
+    def possible_types(ctx = GraphQL::Query::NullContext)
+      @cached_possible_types[ctx] ||= begin
+        @type_visibilities.reduce([]) do |types, type_visibility|
+          selected_types = type_visibility.visible?(ctx) ? types + type_visibility.types : types
+          selected_types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
         end
       end
     end
@@ -93,8 +98,9 @@ module GraphQL
       @resolve_type_proc = new_resolve_type_proc
     end
 
-    protected
-
-    attr_reader :dirty_possible_types
+    def type_visibilities=(type_visibilities)
+      @cached_possible_types = {}
+      @type_visibilities = type_visibilities
+    end
   end
 end

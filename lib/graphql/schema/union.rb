@@ -5,13 +5,14 @@ module GraphQL
       extend GraphQL::Schema::Member::AcceptsDefinition
 
       class << self
-        def possible_types(*types)
+        def possible_types(*types, ctx: GraphQL::Query::NullContext, visibility: nil)
           if types.any?
-            @possible_types = types
+            @type_visibilities ||= []
+            @type_visibilities << @type_visibility_class.new(types, visibility)
           else
-            all_possible_types = @possible_types || []
-            all_possible_types += super if defined?(super)
-            all_possible_types.uniq
+            @type_visibilities.reduce([]) do |types, membership_visibility|
+              membership_visibility.visible?(ctx) ? types + membership_visibility.types : types
+            end
           end
         end
 
@@ -19,12 +20,20 @@ module GraphQL
           type_defn = GraphQL::UnionType.new
           type_defn.name = graphql_name
           type_defn.description = description
-          type_defn.possible_types = possible_types
+          type_defn.membership_visibilities = @type_visibilities
           if respond_to?(:resolve_type)
             type_defn.resolve_type = method(:resolve_type)
           end
           type_defn.metadata[:type_class] = self
           type_defn
+        end
+
+        def type_visibility_class(visibility_class=nil)
+          if visibility_class
+            @type_visibilty_class = visibility_class
+          else
+            @type_visibility_class || TypeMembership
+          end
         end
 
         def kind
