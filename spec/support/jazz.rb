@@ -320,10 +320,10 @@ module Jazz
       end
     end
 
-    def self.filtered_possible_types(ctx)
-      types = []
+    def self.possible_types(*types, ctx: GraphQL::Query::NullContext)
+      types = super
       if ctx[:no_ensemble]
-        types << Ensemble
+        types = self.remove_possible_type(types, Ensemble)
       end
       types
     end

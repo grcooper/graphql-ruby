@@ -15,10 +15,10 @@ describe GraphQL::UnionType do
   }
   let(:filtered_union) {
     class FilteredUnion < GraphQL::UnionType 
-      def filtered_possible_types(ctx)
-        types = []
+      def possible_types(ctx = GraphQL::Query::NullContext)
+        types = super
         if ctx[:no_type_2]
-          types << OpenStruct.new(kind: GraphQL::TypeKinds::OBJECT)
+          types = remove_possible_type(types, OpenStruct.new(kind: GraphQL::TypeKinds::OBJECT))
         end
         types
       end

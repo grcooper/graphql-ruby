@@ -27,8 +27,7 @@ module GraphQL
     accepts_definitions :possible_types, :resolve_type
     ensure_defined :possible_types, :resolve_type, :resolve_type_proc
 
-    attr_accessor :resolve_type_proc, :filtered_possible_types_proc
-
+    attr_accessor :resolve_type_proc, :possible_type_proc
     def initialize
       super
       @dirty_possible_types = []
@@ -58,15 +57,21 @@ module GraphQL
 
     # @return [Array<GraphQL::ObjectType>] Types which may be found in this union
     def possible_types(ctx = GraphQL::Query::NullContext)
-      @clean_possible_types ||= begin
-        if @dirty_possible_types.respond_to?(:map)
-          @dirty_possible_types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
-        else
-          @dirty_possible_types
+      if possible_type_proc
+        possible_type_proc.call(ctx: ctx).map { |type| GraphQL::BaseType.resolve_related_type(type) }
+      else
+        @clean_possible_types ||= begin
+          if @dirty_possible_types.respond_to?(:map)
+            @dirty_possible_types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
+          else
+            @dirty_possible_types
+          end
         end
       end
+    end
 
-      filter_possible_types(@clean_possible_types, ctx)
+    def remove_possible_type(types, type_to_delete)
+      types.reject { |type| type == GraphQL::BaseType.resolve_related_type(type_to_delete) }
     end
 
     # Get a possible type of this {UnionType} by type name
@@ -87,36 +92,12 @@ module GraphQL
       !get_possible_type(type_name, ctx).nil?
     end
 
-    # Types to filter out of the possible_types array
-    # @param ctx [GraphQL::Query::Context] The context for the current query
-    # @return [Array<GraphQL::ObjectType>] The types that are meant to be filtered
-    def filtered_possible_types(ctx)
-      if @filtered_possible_types_proc
-        @filtered_possible_types_proc.call(ctx)
-      else
-        []
-      end
-    end
-
-    def filter_possible_types(types, ctx)
-      return types unless types.respond_to?(:map)
-
-      original_types = types.map { |type| GraphQL::BaseType.resolve_related_type(type) }
-      types_to_filter = filtered_possible_types(ctx).map { |type| GraphQL::BaseType.resolve_related_type(type) }
-
-      original_types - types_to_filter
-    end
-
     def resolve_type(value, ctx)
       ctx.query.resolve_type(self, value)
     end
 
     def resolve_type=(new_resolve_type_proc)
       @resolve_type_proc = new_resolve_type_proc
-    end
-
-    def filtered_possible_types=(new_filter_possible_types_proc)
-      @filtered_possible_types_proc = new_filter_possible_types_proc
     end
 
     protected
